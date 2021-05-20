@@ -6,24 +6,38 @@ import (
 	"time"
 )
 
-type WorkerPool struct {
-	numWorker int
-	chanJob   chan func()
-	wg        *sync.WaitGroup
-	startTime time.Time
+type Job struct {
+	ID    int
+	DoJob func()
 }
 
-func New(numWorker int) *WorkerPool {
-	chanJob := make(chan func(), numWorker)
+type Param struct {
+	NumWorker int
+	IsDebug   bool
+}
+
+type WorkerPool struct {
+	numWorker   int
+	chanJob     chan Job
+	wg          *sync.WaitGroup
+	startTime   time.Time
+	isDebugMode bool
+}
+
+func New(param Param) *WorkerPool {
+	numWorker := param.NumWorker
+
+	chanJob := make(chan Job, numWorker)
 
 	wg := new(sync.WaitGroup)
 	wg.Add(numWorker)
 
 	worker := &WorkerPool{
-		numWorker: numWorker,
-		chanJob:   chanJob,
-		wg:        wg,
-		startTime: time.Now(),
+		numWorker:   numWorker,
+		chanJob:     chanJob,
+		wg:          wg,
+		startTime:   time.Now(),
+		isDebugMode: param.IsDebug,
 	}
 
 	worker.startWorker()
@@ -31,7 +45,7 @@ func New(numWorker int) *WorkerPool {
 	return worker
 }
 
-func (worker *WorkerPool) SendJob(job func()) {
+func (worker *WorkerPool) SendJob(job Job) {
 	if worker.chanJob == nil {
 		log.Println("channel job is nil")
 		return
@@ -49,8 +63,10 @@ func (worker *WorkerPool) Wait() {
 	close(worker.chanJob)
 	worker.wg.Wait()
 
-	elapsed := time.Since(worker.startTime).Seconds()
-	log.Printf("Process is done - %.3f seconds \n", elapsed)
+	if worker.isDebugMode {
+		elapsed := time.Since(worker.startTime).Seconds()
+		log.Printf("Process is done - %.3f seconds \n", elapsed)
+	}
 }
 
 func (worker *WorkerPool) startWorker() {
@@ -59,10 +75,12 @@ func (worker *WorkerPool) startWorker() {
 			defer worker.wg.Done()
 
 			for job := range worker.chanJob {
-				job()
+				job.DoJob()
 			}
 		}()
 	}
 
-	log.Printf("%d Worker is waiting for job... \n", worker.numWorker)
+	if worker.isDebugMode {
+		log.Printf("%d Worker is waiting for job... \n", worker.numWorker)
+	}
 }
