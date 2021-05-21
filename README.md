@@ -21,3 +21,8 @@ for i := 0; i < 10000; i++ {
 
 workerPool.Wait()
 ```
+
+### How to Run
+```
+go build && ./workerpool.exe
+```
