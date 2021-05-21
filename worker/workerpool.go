@@ -12,11 +12,13 @@ type Job struct {
 }
 
 type Param struct {
+	Name      string
 	NumWorker int
 	IsDebug   bool
 }
 
-type WorkerPool struct {
+type workerPool struct {
+	name        string
 	numWorker   int
 	chanJob     chan Job
 	wg          *sync.WaitGroup
@@ -24,7 +26,7 @@ type WorkerPool struct {
 	isDebugMode bool
 }
 
-func New(param Param) *WorkerPool {
+func New(param Param) *workerPool {
 	numWorker := param.NumWorker
 
 	chanJob := make(chan Job, numWorker)
@@ -32,7 +34,8 @@ func New(param Param) *WorkerPool {
 	wg := new(sync.WaitGroup)
 	wg.Add(numWorker)
 
-	worker := &WorkerPool{
+	worker := &workerPool{
+		name:        param.Name,
 		numWorker:   numWorker,
 		chanJob:     chanJob,
 		wg:          wg,
@@ -40,12 +43,10 @@ func New(param Param) *WorkerPool {
 		isDebugMode: param.IsDebug,
 	}
 
-	worker.startWorker()
-
 	return worker
 }
 
-func (worker *WorkerPool) SendJob(job Job) {
+func (worker *workerPool) SendJob(job Job) {
 	if worker.chanJob == nil {
 		log.Println("channel job is nil")
 		return
@@ -54,7 +55,7 @@ func (worker *WorkerPool) SendJob(job Job) {
 	worker.chanJob <- job
 }
 
-func (worker *WorkerPool) Wait() {
+func (worker *workerPool) Wait() {
 	if worker.chanJob == nil {
 		log.Println("channel job is nil")
 		return
@@ -69,7 +70,7 @@ func (worker *WorkerPool) Wait() {
 	}
 }
 
-func (worker *WorkerPool) startWorker() {
+func (worker *workerPool) Run() {
 	for i := 0; i < worker.numWorker; i++ {
 		go func() {
 			defer worker.wg.Done()
@@ -81,6 +82,7 @@ func (worker *WorkerPool) startWorker() {
 	}
 
 	if worker.isDebugMode {
-		log.Printf("%d Worker is waiting for job... \n", worker.numWorker)
+		log.Printf("%d Worker %s is waiting for job... \n",
+			worker.numWorker, worker.name)
 	}
 }

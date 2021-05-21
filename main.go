@@ -7,10 +7,12 @@ import (
 )
 
 func main() {
-	workerpool := worker.New(worker.Param{
+	workerPool := worker.New(worker.Param{
+		Name:      "mock_hit_API",
 		NumWorker: 100,
 		IsDebug:   true,
 	})
+	workerPool.Run()
 
 	for i := 0; i < 10000; i++ {
 		job := worker.Job{
@@ -18,10 +20,10 @@ func main() {
 			DoJob: mockHitAPI,
 		}
 
-		workerpool.SendJob(job)
+		workerPool.SendJob(job)
 	}
 
-	workerpool.Wait()
+	workerPool.Wait()
 }
 
 func mockHitAPI() {
